@@ -90,7 +90,7 @@ function newArticle() {
     $results['formAction'] = "newArticle";
 
     if ( isset( $_POST['saveChanges'] ) ) {
-//            echo "<pre>";
+//            echo "<pre>";newArticle
 //            print_r($results);
 //            print_r($_POST);
 //            echo "<pre>";
@@ -112,7 +112,7 @@ function newArticle() {
     } else {
 
         // Пользователь еще не получил форму редактирования: выводим форму
-        $results['article'] = new Article;
+        $results['article'] = new Article();
         $data = Category::getList();
         $results['categories'] = $data['results'];
         require( TEMPLATE_PATH . "/admin/editArticle.php" );
@@ -132,13 +132,11 @@ function editArticle() {
     $results['formAction'] = "editArticle";
 
     if (isset($_POST['saveChanges'])) {
-
         // Пользователь получил форму редактирования статьи: сохраняем изменения
         if ( !$article = Article::getById( (int)$_POST['articleId'] ) ) {
             header( "Location: admin.php?error=articleNotFound" );
             return;
         }
-
         $article->storeFormValues( $_POST );
         $article->update();
         header( "Location: admin.php?status=changesSaved" );
@@ -174,7 +172,7 @@ function deleteArticle() {
 function listArticles() {
     $results = array();
     
-    $data = Article::getList();
+    $data = Article::getList(root: true);
     $results['articles'] = $data['results'];
     $results['totalRows'] = $data['totalRows'];
     

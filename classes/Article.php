@@ -38,6 +38,20 @@ class Article
     public $content = null;
 
     /**
+     * @var array модификатор доступа
+     */
+    public $access = [];
+
+    /**
+     * @var array доступные модификаторы доступа
+     */
+    public static $accessValues = [
+        0 => 'Закрыт для просмотра',
+        1 => 'Открыт для просмотра',
+        2 => 'Открыт для редактирование / просмотра',
+    ];
+
+    /**
      * Создаст объект статьи
      *
      * @param array $data массив значений (столбцов) строки таблицы статей
@@ -70,6 +84,12 @@ class Article
         if (isset($data['content'])) {
             $this->content = $data['content'];
         }
+
+        if (isset($data['access'])) {
+            $this->access = [];
+            $this->access[$data['access']] = self::$accessValues[$data['access']];
+        }
+
     }
 
 
@@ -81,6 +101,9 @@ class Article
     public function storeFormValues($params)
     {
 
+        echo '<h4>';
+        print_r($params);
+        echo '</h4>';
         // Сохраняем все параметры
         $this->__construct($params);
 
@@ -129,16 +152,16 @@ class Article
      * @return Array|false Двух элементный массив: results => массив объектов Article; totalRows => общее количество строк
      */
     public static function getList($numRows = 1000000,
-                                   $categoryId = null, $order = "publicationDate DESC", $shortLength = 50)
+                                   $categoryId = null, $order = "publicationDate DESC", $shortLength = 50, $root = false)
     {
         $conn = new PDO(DB_DSN, DB_USERNAME, DB_PASSWORD);
         $fromPart = "FROM articles";
-        $categoryClause = $categoryId ? "WHERE categoryId = :categoryId" : "";
+        $categoryClause = $categoryId ? "categoryId = :categoryId " : "";
+        $accessCondition = $root ? '' : 'access != 0 ';
         $sql = "SELECT *, UNIX_TIMESTAMP(publicationDate) 
                 AS publicationDate
-                $fromPart $categoryClause
+                $fromPart ". (($categoryClause.$accessCondition) ? 'WHERE '.($categoryClause.$accessCondition) : '')  ."
                 ORDER BY  $order  LIMIT :numRows";
-
         $st = $conn->prepare($sql);
         $st->bindValue(":numRows", $numRows, PDO::PARAM_INT);
         /**
@@ -189,13 +212,14 @@ class Article
 
         // Вставляем статью
         $conn = new PDO(DB_DSN, DB_USERNAME, DB_PASSWORD);
-        $sql = "INSERT INTO articles ( publicationDate, categoryId, title, summary, content ) VALUES ( FROM_UNIXTIME(:publicationDate), :categoryId, :title, :summary, :content )";
+        $sql = "INSERT INTO articles ( publicationDate, categoryId, title, summary, content, access ) VALUES ( FROM_UNIXTIME(:publicationDate), :categoryId, :title, :summary, :content, :access )";
         $st = $conn->prepare($sql);
         $st->bindValue(":publicationDate", $this->publicationDate, PDO::PARAM_INT);
         $st->bindValue(":categoryId", $this->categoryId, PDO::PARAM_INT);
         $st->bindValue(":title", $this->title, PDO::PARAM_STR);
         $st->bindValue(":summary", $this->summary, PDO::PARAM_STR);
         $st->bindValue(":content", $this->content, PDO::PARAM_STR);
+        $st->bindValue(":access", array_key_first($this->access), PDO::PARAM_INT);
         $st->execute();
         $this->id = $conn->lastInsertId();
         $conn = null;
@@ -215,7 +239,7 @@ class Article
         // Обновляем статью
         $conn = new PDO(DB_DSN, DB_USERNAME, DB_PASSWORD);
         $sql = "UPDATE articles SET publicationDate=FROM_UNIXTIME(:publicationDate),"
-            . " categoryId=:categoryId, title=:title, summary=:summary,"
+            . " categoryId=:categoryId, title=:title, summary=:summary, access=:access,"
             . " content=:content WHERE id = :id";
 
         $st = $conn->prepare($sql);
@@ -224,6 +248,7 @@ class Article
         $st->bindValue(":title", $this->title, PDO::PARAM_STR);
         $st->bindValue(":summary", $this->summary, PDO::PARAM_STR);
         $st->bindValue(":content", $this->content, PDO::PARAM_STR);
+        $st->bindValue(":access", array_key_first($this->access), PDO::PARAM_INT);
         $st->bindValue(":id", $this->id, PDO::PARAM_INT);
         $st->execute();
         $conn = null;
