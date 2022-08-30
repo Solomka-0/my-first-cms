@@ -4,6 +4,8 @@ require("config.php");
 session_start();
 $action = isset($_GET['action']) ? $_GET['action'] : "";
 $username = isset($_SESSION['username']) ? $_SESSION['username'] : "";
+$access = $_SESSION['access'] ?? (isset($username) ? 0 : null);
+
 
 if ($action != "login" && $action != "logout" && !$username) {
     login();
@@ -54,20 +56,35 @@ function login() {
 
         // Пользователь получает форму входа: попытка авторизировать пользователя
 
-        if ($_POST['username'] == ADMIN_USERNAME 
-                && $_POST['password'] == ADMIN_PASSWORD) {
+        $username = $_POST['username'];
+        $password = $_POST['password'];
 
-          // Вход прошел успешно: создаем сессию и перенаправляем на страницу администратора
-          $_SESSION['username'] = ADMIN_USERNAME;
-          header( "Location: admin.php");
+        $conn = new PDO(DB_DSN, DB_USERNAME, DB_PASSWORD);
 
+        $request = 'SELECT * FROM users WHERE username LIKE :username AND password LIKE :password';
+        $st = $conn->prepare($request);
+        $st->bindValue(':username', $username, PDO::PARAM_STR);
+        $st->bindValue(':password', $password, PDO::PARAM_STR);
+
+        $st->execute();
+
+        $result = $st->fetch();
+
+        if ($result != null) {
+            if ($result['access'] != 0) {
+                // Вход прошел успешно: создаем сессию и перенаправляем на страницу администратора
+                $_SESSION['username'] = $result['username'];
+                $_SESSION['access'] = $result['access'];
+                header("Location: admin.php");
+            } else {
+                $results['errorMessage'] = "Слишком низкий модификатор доступа. Вам не доступны функции администратора!";
+                require( TEMPLATE_PATH . "/admin/loginForm.php" );
+            }
         } else {
-
           // Ошибка входа: выводим сообщение об ошибке для пользователя
-          $results['errorMessage'] = "Неправильный пароль, попробуйте ещё раз.";
+          $results['errorMessage'] = "Неверный логин или пароль, попробуйте ещё раз.";
           require( TEMPLATE_PATH . "/admin/loginForm.php" );
         }
-
     } else {
 
       // Пользователь еще не получил форму: выводим форму
