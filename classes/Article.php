@@ -28,6 +28,11 @@ class Article
     public $categoryId = null;
 
     /**
+     * @var int ID категории статьи
+     */
+    public $subcategoryId = null;
+
+    /**
      * @var string Краткое описание статьи
      */
     public $summary = null;
@@ -58,7 +63,6 @@ class Article
      */
     public function __construct($data = array())
     {
-
         if (isset($data['id'])) {
             $this->id = (int)$data['id'];
         }
@@ -75,6 +79,10 @@ class Article
 
         if (isset($data['categoryId'])) {
             $this->categoryId = (int)$data['categoryId'];
+        }
+
+        if (isset($data['subcategoryId'])) {
+            $this->subcategoryId = (int)$data['subcategoryId'];
         }
 
         if (isset($data['summary'])) {
@@ -100,10 +108,6 @@ class Article
      */
     public function storeFormValues($params)
     {
-
-        echo '<h4>';
-        print_r($params);
-        echo '</h4>';
         // Сохраняем все параметры
         $this->__construct($params);
 
@@ -152,16 +156,30 @@ class Article
      * @return Array|false Двух элементный массив: results => массив объектов Article; totalRows => общее количество строк
      */
     public static function getList($numRows = 1000000,
-                                   $categoryId = null, $order = "publicationDate DESC", $shortLength = 50, $root = false)
+                                   $categoryId = null,
+                                   $order = "publicationDate DESC",
+                                   $subcategoryId = null,
+                                   $shortLength = 50, $root = false)
     {
         $conn = new PDO(DB_DSN, DB_USERNAME, DB_PASSWORD);
         $fromPart = "FROM articles";
+        $condition = [];
+        if (isset($subcategoryId)) $condition[] = "subcategoryId = :subcategoryId";
+        if (isset($categoryId)) $condition[] = "categoryId = :categoryId";
+        if (!$root) $condition[] = "access != 0";
+        $condition_str = implode(' AND ', $condition);
+
+
+        $subcategoryCondition = $subcategoryId ? "subcategoryId = :subcategoryId " : "";
         $categoryClause = $categoryId ? "categoryId = :categoryId " : "";
         $accessCondition = $root ? '' : 'access != 0 ';
+
         $sql = "SELECT *, UNIX_TIMESTAMP(publicationDate) 
                 AS publicationDate
-                $fromPart ". (($categoryClause.$accessCondition) ? 'WHERE '.($categoryClause.$accessCondition) : '')  ."
-                ORDER BY  $order  LIMIT :numRows";
+                $fromPart " . ($condition_str ? 'WHERE ' . $condition_str . ' ' : '') .
+            "ORDER BY  $order  LIMIT :numRows";
+
+
         $st = $conn->prepare($sql);
         $st->bindValue(":numRows", $numRows, PDO::PARAM_INT);
         /**
@@ -172,9 +190,13 @@ class Article
 
         if ($categoryId)
             $st->bindValue(":categoryId", $categoryId, PDO::PARAM_INT);
+        if ($subcategoryId)
+            $st->bindValue(":subcategoryId", $subcategoryId, PDO::PARAM_INT);
+
 
         $st->execute(); // выполняем запрос к базе данных
         $list = array();
+
 
         while ($row = $st->fetch()) {
             $article = new Article($row);
@@ -186,13 +208,15 @@ class Article
         }
 
         // Получаем общее количество статей, которые соответствуют критерию
-        $sql = "SELECT COUNT(*) AS totalRows $fromPart $categoryClause";
+        $sql = "SELECT COUNT(*) AS totalRows $fromPart" . ($categoryClause ? " WHERE $categoryClause" : "") . "";
+
         $st = $conn->prepare($sql);
         if ($categoryId)
             $st->bindValue(":categoryId", $categoryId, PDO::PARAM_INT);
         $st->execute(); // выполняем запрос к базе данных
         $totalRows = $st->fetch();
         $conn = null;
+
 
         return (array(
             "results" => $list,

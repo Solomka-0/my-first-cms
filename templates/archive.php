@@ -2,7 +2,7 @@
 	  
     <h1><?php echo htmlspecialchars( $results['pageHeading'] ) ?></h1>
     
-    <?php if ( $results['category'] ) { ?>
+    <?php if ( isset($results['category'])) { ?>
     <h3 class="categoryDescription"><?php echo htmlspecialchars( $results['category']->description ) ?></h3>
     <?php } ?>
 
@@ -18,15 +18,24 @@
                     <a href=".?action=viewArticle&amp;articleId=<?php echo $article->id?>">
                         <?php echo htmlspecialchars( $article->title )?>
                     </a>
-
-                    <?php if ( !$results['category'] && $article->categoryId ) { ?>
-                    <span class="category">
-                        in 
-                        <a href=".?action=archive&amp;categoryId=<?php echo $article->categoryId?>">
-                            <?php echo htmlspecialchars( $results['categories'][$article->categoryId]->name ) ?>
+                    <?php
+                    if (isset($article->categoryId)) { ?>
+                        <span class="category">
+                        in
+                        <a href=".?action=archive&amp;categoryId=<?php echo $article->categoryId; ?>">
+                            <?php
+                            echo htmlspecialchars($results['categories'][$article->categoryId]->name)
+                            ?>
+                        </a>
+                        <a href=".?action=archive&amp;subcategoryId=<?php echo $results['subcategories'][$article->categoryId]->id; ?>">
+                        <?='-> ' . htmlspecialchars($results['subcategories'][$article->categoryId]->name)?>
                         </a>
                     </span>
-                    <?php } ?>          
+                    <?php } else { ?>
+                        <span class="category">
+                        <?php echo "Без категории" ?>
+                    </span>
+                    <?php } ?>
                 </h2>
               <p class="summary"><?php echo htmlspecialchars( $article->summary )?></p>
             </li>

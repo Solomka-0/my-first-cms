@@ -32,6 +32,7 @@ try {
     // Подключаем Классы моделей (классы, отвечающие за работу с сущностями базы данных)
     require(CLASS_PATH . "/Article.php");
     require(CLASS_PATH . "/Category.php");     
+    require(CLASS_PATH . "/Subcategory.php");
 
 } catch (Exception $ex) {
     echo "При загрузке конфигураций возникла проблема!<br><br>";

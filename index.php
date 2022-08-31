@@ -28,16 +28,54 @@ function initApplication()
     }
 }
 
+function subcategoryArchive(int $subcategoryId) {
+    $results = [];
+
+    $data = Article::getList( 100000, subcategoryId: $subcategoryId);
+
+    $results['subcategory'] = Subcategory::getById($subcategoryId);
+
+    $results['pageHeading'] = $results['subcategory'] ?  $results['subcategory']->name : "Article Archive";
+    $results['pageTitle'] = $results['pageHeading'] . " | Widget News";
+
+    $results['articles'] = $data['results'];
+    $results['totalRows'] = $data['totalRows'];
+
+
+    $data = Category::getList();
+    $results['categories'] = array();
+    foreach ( $data['results'] as $category ) {
+        $results['categories'][$category->id] = $category;
+    }
+
+    $data = Subcategory::getList();
+    $results['subcategories'] = array();
+    foreach ( $data['results'] as $subcategory ) {
+        $results['subcategories'][$subcategory->category_id] = $subcategory;
+    }
+
+    require( TEMPLATE_PATH . "/archive.php" );
+}
+
 function archive() 
 {
     $results = [];
-    
+
+
+
+    $subcategoryId = $_GET['subcategoryId'] ?? null;
+
+    if (isset($subcategoryId)) {
+        subcategoryArchive($subcategoryId);
+        exit;
+    }
+
     $categoryId = ( isset( $_GET['categoryId'] ) && $_GET['categoryId'] ) ? (int)$_GET['categoryId'] : null;
     
-    $results['category'] = Category::getById( $categoryId );
-    
+    $results['category'] = Category::getById($categoryId);
+
     $data = Article::getList( 100000, $results['category'] ? $results['category']->id : null );
-    
+
     $results['articles'] = $data['results'];
     $results['totalRows'] = $data['totalRows'];
     
@@ -46,6 +84,12 @@ function archive()
     
     foreach ( $data['results'] as $category ) {
         $results['categories'][$category->id] = $category;
+    }
+
+    $data = Subcategory::getList();
+    $results['subcategories'] = array();
+    foreach ( $data['results'] as $subcategory ) {
+        $results['subcategories'][$subcategory->category_id] = $subcategory;
     }
     
     $results['pageHeading'] = $results['category'] ?  $results['category']->name : "Article Archive";
@@ -87,21 +131,24 @@ function homepage()
 {
     $results = array();
     $data = Article::getList(HOMEPAGE_NUM_ARTICLES);
+
+
     $results['articles'] = $data['results'];
     $results['totalRows'] = $data['totalRows'];
-    
+
     $data = Category::getList();
     $results['categories'] = array();
-    foreach ( $data['results'] as $category ) { 
+    foreach ( $data['results'] as $category ) {
         $results['categories'][$category->id] = $category;
-    } 
+    }
+
+    $data = Subcategory::getList();
+    $results['subcategories'] = array();
+    foreach ( $data['results'] as $subcategory ) {
+        $results['subcategories'][$subcategory->category_id] = $subcategory;
+    }
     
     $results['pageTitle'] = "Простая CMS на PHP";
-    
-//    echo "<pre>";
-//    print_r($data);
-//    echo "</pre>";
-//    die();
     
     require(TEMPLATE_PATH . "/homepage.php");
     

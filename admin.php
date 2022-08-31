@@ -143,7 +143,6 @@ function newArticle() {
  * @return null
  */
 function editArticle() {
-	  
     $results = array();
     $results['pageTitle'] = "Edit Article";
     $results['formAction'] = "editArticle";
@@ -166,8 +165,9 @@ function editArticle() {
 
         // Пользвоатель еще не получил форму редактирования: выводим форму
         $results['article'] = Article::getById((int)$_GET['articleId']);
-        $data = Category::getList();
-        $results['categories'] = $data['results'];
+
+        $results['categories'] = Category::getList()['results'];
+        $results['subcategories'] = Subcategory::getList()['results'];
         require(TEMPLATE_PATH . "/admin/editArticle.php");
     }
 
